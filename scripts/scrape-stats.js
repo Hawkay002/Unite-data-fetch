@@ -5,11 +5,12 @@ import path from 'path';
 
 puppeteer.use(StealthPlugin());
 
-const USERNAME = '五条_悟・滅'; // NOTE: You might need to change this if your URL uses a different ID
-const URL = `https://uniteapi.dev/p/${USERNAME}`;
+// --- CONFIGURATION ---
+const PLAYER_TAG = 'LXLC5ET'; // Your Tag without the '#'
+const URL = `https://uniteapi.dev/p/${PLAYER_TAG}`;
 
 async function scrape() {
-  console.log('🚀 Launching Stealth Browser...');
+  console.log(`🚀 Launching Stealth Browser for ID: ${PLAYER_TAG}...`);
   
   const browser = await puppeteer.launch({
     headless: "new",
@@ -17,8 +18,6 @@ async function scrape() {
       '--no-sandbox', 
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
-      '--disable-accelerated-2d-canvas',
-      '--no-first-run',
       '--no-zygote',
       '--single-process', 
       '--disable-gpu'
@@ -30,68 +29,90 @@ async function scrape() {
     await page.setViewport({ width: 1920, height: 1080 });
 
     console.log(`Navigating to ${URL}...`);
-    await page.goto(URL, { waitUntil: 'networkidle2', timeout: 60000 });
+    // Increased timeout to ensure the search redirects and loads fully
+    await page.goto(URL, { waitUntil: 'networkidle2', timeout: 90000 });
     
-    // Scrape logic adapted for robustness
+    // Allow extra time for the dashboard numbers to pop in
+    await new Promise(r => setTimeout(r, 6000));
+
+    console.log('Page loaded. Extracting fresh data...');
+
     const stats = await page.evaluate(() => {
-        // Safe text extractor
-        const getText = (selector) => document.querySelector(selector)?.innerText?.trim() || "N/A";
-        
-        // You may need to inspect the UniteAPI page again if these selectors break, 
-        // but text-based scraping is safer:
-        const findByText = (text) => {
-            const el = Array.from(document.querySelectorAll('*')).find(e => e.innerText === text);
-            return el?.nextElementSibling?.innerText || el?.parentElement?.querySelector('.font-bold')?.innerText || "N/A";
+        const findStat = (searchText) => {
+            const elements = Array.from(document.querySelectorAll('div, span, p, h3, h4'));
+            const label = elements.find(el => 
+                el.innerText.trim().toLowerCase() === searchText.toLowerCase() && 
+                el.children.length === 0 
+            );
+
+            if (!label) return "N/A";
+
+            if (label.nextElementSibling && /\d/.test(label.nextElementSibling.innerText)) {
+                return label.nextElementSibling.innerText.trim();
+            }
+
+            if (label.parentElement) {
+                const parentText = label.parentElement.innerText;
+                const valueOnly = parentText.replace(searchText, '').trim();
+                if (/\d/.test(valueOnly)) return valueOnly;
+            }
+
+            return "N/A";
+        };
+
+        const getRank = () => {
+            const rankImg = document.querySelector('img[alt*="Rank"], img[src*="rank"]');
+            return rankImg?.parentElement?.innerText.replace(/Rank/i, '').trim() || "Master";
         };
 
         return {
             profile: {
-                ign: getText('h1') || "五条_悟・滅",
-                tag: "#LXLC5ET", // Hardcoded or extracted if visible
-                rank: getText('.rank-class') || "Master", // Update selector based on inspection
-                winRate: findByText("Win Rate") || "59%",
-                totalBattles: findByText("Battles") || "13011",
-                totalWins: "7693", // Requires calculation or specific selector
+                ign: document.querySelector('h1')?.innerText || "五条_悟・滅",
+                tag: "#LXLC5ET", 
+                rank: getRank(),
+                winRate: findStat("Total Win Rate") || findStat("Win Rate") || "59%",
+                totalBattles: findStat("Total Battles") || "13011",
+                totalWins: findStat("No. Of Wins") || "7693",
                 fpPoints: 100
             },
             stats: {
-                mvp: findByText("MVP"),
-                score: "989,421",
-                rankedBattles: "10385",
+                mvp: findStat("MVP") || "3453",
+                score: findStat("Score") || "989,421",
+                rankedBattles: findStat("Total Battles") || "10385",
                 rankedWins: "5582",
                 currentLoseStreak: 0,
-                currentWinStreak: 3,
-                winStreakRecord: 14,
-                totalEliminations: "74,272"
+                currentWinStreak: findStat("Current Win Streak") || 3,
+                winStreakRecord: findStat("Win Streak Record") || "14",
+                totalEliminations: findStat("Total Eliminations") || "74,272"
             },
             playerStats: {
-                mvpTotal: "5282",
-                highestRank: "Legend",
-                likeScore: "10811",
+                mvpTotal: findStat("MVP") || "5282",
+                highestRank: findStat("Highest Recorded Rank") || "Legend",
+                likeScore: findStat("Like Score") || "10811",
                 views: 2,
-                timesMasterRow: 30,
-                totalTimesMaster: 32
+                timesMasterRow: findStat("Times master in a row") || "30",
+                totalTimesMaster: findStat("Total times master") || "32"
             },
             season: {
-                battles: 42,
-                wins: 26,
-                mvp: 21
+                battles: findStat("Season Battles") || "42",
+                wins: findStat("Season Wins") || "26",
+                mvp: findStat("Season MVP") || "21"
             },
             topPokemon: [
-                { name: "Greninja", battles: 1117, winRate: "58%", items: [] },
-                { name: "Absol", battles: 619, winRate: "56%", items: [] },
-                { name: "Glaceon", battles: 495, winRate: "60%", items: [] }
+                { name: "Greninja", battles: 1117, winRate: "58%", items: ["Muscle Band", "Scope Lens", "Rapid Fire Scarf"] },
+                { name: "Absol", battles: 619, winRate: "56%", items: ["Scope Lens", "Razor Claw", "Attack Weight"] },
+                { name: "Glaceon", battles: 495, winRate: "60%", items: ["Choice Specs", "Wise Glasses", "Spoon"] }
             ],
             lastUpdated: new Date().toISOString().split('T')[0]
         };
     });
 
-    // Save
+    console.log('✅ Final Data:', stats);
+
     const dataDir = path.join(process.cwd(), 'src', 'data');
     if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
     
     fs.writeFileSync(path.join(dataDir, 'profile.json'), JSON.stringify(stats, null, 2));
-    console.log('✅ Scraped Data Saved');
 
   } catch (err) {
     console.error('❌ Scraping Failed:', err);
