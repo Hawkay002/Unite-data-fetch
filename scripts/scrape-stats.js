@@ -6,39 +6,50 @@ import path from 'path';
 puppeteer.use(StealthPlugin());
 
 const PLAYER_TAG = 'LXLC5ET'; // Your Tag
+const URL = `https://uniteapi.dev/p/${PLAYER_TAG}`;
 
 async function scrape() {
-  console.log('🚀 Launching "Human Search" Bot...');
+  console.log(`🚀 Launching Direct Link Bot for Tag: ${PLAYER_TAG}...`);
   
   const browser = await puppeteer.launch({
     headless: "new",
-    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--single-process', '--disable-gpu']
+    args: [
+      '--no-sandbox', 
+      '--disable-setuid-sandbox', 
+      '--disable-dev-shm-usage', 
+      '--single-process', 
+      '--disable-gpu',
+      '--window-size=1920,1080'
+    ]
   });
 
   try {
     const page = await browser.newPage();
     await page.setViewport({ width: 1920, height: 1080 });
 
-    // 1. Go to Homepage
-    await page.goto('https://uniteapi.dev', { waitUntil: 'networkidle2', timeout: 60000 });
+    // 1. Direct Navigation (Bypasses Search Bar issues)
+    console.log(`Navigating to ${URL}...`);
+    // We allow 60s for the page to load initially
+    await page.goto(URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
 
-    // 2. Type Tag in Search Bar
-    console.log(`Searching for tag: #${PLAYER_TAG}...`);
-    const searchInputSelector = 'input[type="text"]';
-    await page.waitForSelector(searchInputSelector, { timeout: 15000 });
-    await page.type(searchInputSelector, `#${PLAYER_TAG}`, { delay: 100 });
-    await page.keyboard.press('Enter');
+    // 2. THE SMART WAIT (The Fix for "N/A")
+    // The robot will wait up to 30 seconds specifically for the text "Win Rate" to appear.
+    // If Cloudflare blocks us, this will timeout and tell us.
+    console.log('Waiting for stats to appear on screen...');
+    try {
+        await page.waitForFunction(
+            () => document.body.innerText.includes('Win Rate') || document.body.innerText.includes('Battles'),
+            { timeout: 30000 }
+        );
+    } catch (e) {
+        // If this fails, we print what the page actually says so we can debug (e.g. "Just a moment...")
+        const pageTitle = await page.title();
+        const bodySnippet = await page.evaluate(() => document.body.innerText.substring(0, 100));
+        throw new Error(`Timeout waiting for stats. Page Title: "${pageTitle}". Page Text: "${bodySnippet}..."`);
+    }
 
-    // 3. Wait for Profile to Load (Look for "Win Rate")
-    console.log('Waiting for Profile...');
-    await page.waitForFunction(
-      () => document.body.innerText.includes('Win Rate') || document.body.innerText.includes('Battles'),
-      { timeout: 30000 }
-    );
-    await new Promise(r => setTimeout(r, 5000)); // Safety wait
-
-    // 4. Extract Data
-    console.log('Extracting numbers...');
+    // 3. Extract Data
+    console.log('Stats found! Extracting numbers...');
     const stats = await page.evaluate(() => {
         const findStat = (keywords) => {
             const allElements = Array.from(document.querySelectorAll('div, span, p, h3, h4'));
@@ -48,11 +59,11 @@ async function scrape() {
             });
             if (!label) return null;
 
-            // Check Next Sibling
+            // Strategy 1: Next Sibling
             if (label.nextElementSibling && /\d/.test(label.nextElementSibling.innerText)) {
                 return label.nextElementSibling.innerText.trim();
             }
-            // Check Parent
+            // Strategy 2: Parent Container
             if (label.parentElement) {
                 const val = label.parentElement.innerText.replace(label.innerText, '').trim();
                 if (/\d/.test(val)) return val;
@@ -99,17 +110,17 @@ async function scrape() {
                 mvp: findStat(["Season MVP"])
             },
             topPokemon: [
-                { name: "Greninja", battles: 1117, winRate: "58%", items: [] },
-                { name: "Absol", battles: 619, winRate: "56%", items: [] },
-                { name: "Glaceon", battles: 495, winRate: "60%", items: [] }
+                { name: "Greninja", battles: 1117, winRate: "58%", items: ["Muscle Band", "Scope Lens", "Rapid Fire Scarf"] },
+                { name: "Absol", battles: 619, winRate: "56%", items: ["Scope Lens", "Razor Claw", "Attack Weight"] },
+                { name: "Glaceon", battles: 495, winRate: "60%", items: ["Choice Specs", "Wise Glasses", "Spoon"] }
             ],
             lastUpdated: new Date().toISOString().split('T')[0]
         };
     });
 
-    // --- CRASH SWITCH (Safety) ---
+    // --- SAFETY CHECK ---
     if (!stats.profile.winRate || stats.profile.winRate === "N/A" || stats.profile.winRate === "null") {
-        throw new Error("⚠️ SAFETY ABORT: Could not find Win Rate. Keeping old data.");
+        throw new Error("⚠️ SAFETY ABORT: Stats missing even after wait. Keeping old data.");
     }
 
     console.log('✅ Success! Found Win Rate:', stats.profile.winRate);
