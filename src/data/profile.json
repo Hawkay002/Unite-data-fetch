@@ -2,53 +2,65 @@
   "profile": {
     "ign": "uniteapi.dev",
     "tag": "#LXLC5ET",
-    "rank": "N/A",
+    "rank": "Master",
     "winRate": "N/A",
     "totalBattles": "N/A",
-    "totalWins": "7693",
+    "totalWins": "N/A",
     "fpPoints": 100
   },
   "stats": {
     "mvp": "N/A",
-    "score": "989,421",
-    "rankedBattles": "10385",
+    "score": "N/A",
+    "rankedBattles": "N/A",
     "rankedWins": "5582",
     "currentLoseStreak": 0,
-    "currentWinStreak": 3,
-    "winStreakRecord": 14,
-    "totalEliminations": "74,272"
+    "currentWinStreak": "N/A",
+    "winStreakRecord": "N/A",
+    "totalEliminations": "N/A"
   },
   "playerStats": {
-    "mvpTotal": "5282",
-    "highestRank": "Legend",
-    "likeScore": "10811",
+    "mvpTotal": "N/A",
+    "highestRank": "N/A",
+    "likeScore": "N/A",
     "views": 2,
-    "timesMasterRow": 30,
-    "totalTimesMaster": 32
+    "timesMasterRow": "N/A",
+    "totalTimesMaster": "N/A"
   },
   "season": {
-    "battles": 42,
-    "wins": 26,
-    "mvp": 21
+    "battles": "N/A",
+    "wins": "N/A",
+    "mvp": "N/A"
   },
   "topPokemon": [
     {
       "name": "Greninja",
       "battles": 1117,
       "winRate": "58%",
-      "items": []
+      "items": [
+        "Muscle Band",
+        "Scope Lens",
+        "Rapid Fire Scarf"
+      ]
     },
     {
       "name": "Absol",
       "battles": 619,
       "winRate": "56%",
-      "items": []
+      "items": [
+        "Scope Lens",
+        "Razor Claw",
+        "Attack Weight"
+      ]
     },
     {
       "name": "Glaceon",
       "battles": 495,
       "winRate": "60%",
-      "items": []
+      "items": [
+        "Choice Specs",
+        "Wise Glasses",
+        "Spoon"
+      ]
     }
   ],
   "lastUpdated": "2026-01-20"
