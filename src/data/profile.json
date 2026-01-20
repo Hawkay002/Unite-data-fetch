@@ -1,15 +1,15 @@
 {
   "profile": {
-    "ign": "五条_悟・滅",
+    "ign": "uniteapi.dev",
     "tag": "#LXLC5ET",
-    "rank": "Master 466",
-    "winRate": "59%",
-    "totalBattles": "13011",
+    "rank": "N/A",
+    "winRate": "N/A",
+    "totalBattles": "N/A",
     "totalWins": "7693",
     "fpPoints": 100
   },
   "stats": {
-    "mvp": "3453",
+    "mvp": "N/A",
     "score": "989,421",
     "rankedBattles": "10385",
     "rankedWins": "5582",
@@ -32,9 +32,24 @@
     "mvp": 21
   },
   "topPokemon": [
-    { "name": "Greninja", "battles": 1117, "winRate": "58%", "items": ["Muscle Band", "Scope Lens", "Rapid Fire Scarf"] },
-    { "name": "Absol", "battles": 619, "winRate": "56%", "items": ["Scope Lens", "Razor Claw", "Attack Weight"] },
-    { "name": "Glaceon", "battles": 495, "winRate": "60%", "items": ["Choice Specs", "Wise Glasses", "Spoon"] }
+    {
+      "name": "Greninja",
+      "battles": 1117,
+      "winRate": "58%",
+      "items": []
+    },
+    {
+      "name": "Absol",
+      "battles": 619,
+      "winRate": "56%",
+      "items": []
+    },
+    {
+      "name": "Glaceon",
+      "battles": 495,
+      "winRate": "60%",
+      "items": []
+    }
   ],
   "lastUpdated": "2026-01-20"
 }
