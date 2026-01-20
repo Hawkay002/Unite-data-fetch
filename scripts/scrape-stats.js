@@ -5,7 +5,7 @@ import path from 'path';
 
 puppeteer.use(StealthPlugin());
 
-const USERNAME = 'Shovith'; // NOTE: You might need to change this if your URL uses a different ID
+const USERNAME = '五条_悟・滅'; // NOTE: You might need to change this if your URL uses a different ID
 const URL = `https://uniteapi.dev/p/${USERNAME}`;
 
 async function scrape() {
