@@ -2,8 +2,12 @@ name: Update Unite Stats
 
 on:
   schedule:
-    - cron: '0 */2 * * *' # Every 2 hours
-  workflow_dispatch:
+    # -----------------------------------------------------------
+    # CRON SCHEDULE: Every Hour
+    # '0 * * * *' runs at minute 0 of every hour (1:00, 2:00, etc.)
+    # -----------------------------------------------------------
+    - cron: '0 * * * *' 
+  workflow_dispatch: # Allows manual click to run
 
 permissions:
   contents: write
@@ -30,5 +34,5 @@ jobs:
       - name: Commit and Push
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "chore(stats): auto-update [skip ci]"
+          commit_message: "chore(stats): hourly update [skip ci]"
           file_pattern: src/data/profile.json
