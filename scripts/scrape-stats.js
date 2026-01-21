@@ -8,12 +8,11 @@ puppeteer.use(StealthPlugin());
 const PLAYER_TAG = 'LXLC5ET';
 const URL = `https://uniteapi.dev/p/${PLAYER_TAG}`;
 
-// 🎭 THE MASK: This makes the robot claim it is a standard Windows Chrome Browser.
-// If this fails, copy your specific User-Agent from the Network Tab and paste it here.
-const USER_AGENT = 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Mobile Safari/537.36';
+// 🎭 THE MASK: Matches your PC exactly so Cloudflare accepts the cookie.
+const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36';
 
 async function scrape() {
-  console.log(`🚀 Launching Impersonator Bot...`);
+  console.log(`🚀 Launching Clone Bot (Chrome 143)...`);
   
   const browser = await puppeteer.launch({
     headless: "new",
@@ -24,14 +23,13 @@ async function scrape() {
       '--single-process', 
       '--disable-gpu',
       '--window-size=1920,1080',
-      '--disable-blink-features=AutomationControlled' // Hides "Chrome is being controlled by automated software"
     ]
   });
 
   try {
     const page = await browser.newPage();
     
-    // 1. WEAR THE MASK (Set User-Agent)
+    // 1. WEAR THE MASK
     await page.setUserAgent(USER_AGENT);
     await page.setViewport({ width: 1920, height: 1080 });
 
@@ -43,8 +41,8 @@ async function scrape() {
         const cookies = cookieString.split(';').map(pair => {
             const [name, ...value] = pair.trim().split('=');
             return { 
-                name, 
-                value: value.join('='), 
+                name: name.trim(), 
+                value: value.join('=').trim(), 
                 domain: '.uniteapi.dev', 
                 path: '/' 
             };
@@ -56,19 +54,22 @@ async function scrape() {
 
     // 3. Navigate
     console.log(`Navigating to ${URL}...`);
-    await page.goto(URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    // Give it 3 minutes because heavy sites can be slow
+    await page.goto(URL, { waitUntil: 'domcontentloaded', timeout: 180000 });
 
     // 4. Smart Wait
     console.log('Waiting for stats...');
     try {
         await page.waitForFunction(
             () => document.body.innerText.includes('Win Rate') || document.body.innerText.includes('Battles'),
-            { timeout: 30000 }
+            { timeout: 60000 }
         );
     } catch (e) {
-        // Debugging Info
         const pageTitle = await page.title();
-        throw new Error(`Cloudflare blocked us again. Title: "${pageTitle}". (Try copying your specific User-Agent string into the script)`);
+        const bodySnippet = await page.evaluate(() => document.body.innerText.substring(0, 100));
+        
+        // If it says "Just a moment", it means IP Binding is active (bad news)
+        throw new Error(`Cloudflare blocked us. Title: "${pageTitle}". Text: "${bodySnippet}..."`);
     }
 
     // 5. Extract Data
