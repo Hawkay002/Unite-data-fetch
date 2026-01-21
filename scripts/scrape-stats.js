@@ -5,11 +5,11 @@ import path from 'path';
 
 puppeteer.use(StealthPlugin());
 
-const PLAYER_TAG = 'LXLC5ET'; // Your Tag
+const PLAYER_TAG = 'LXLC5ET';
 const URL = `https://uniteapi.dev/p/${PLAYER_TAG}`;
 
 async function scrape() {
-  console.log(`🚀 Launching Direct Link Bot for Tag: ${PLAYER_TAG}...`);
+  console.log(`🚀 Launching Bot with Secret Cookie...`);
   
   const browser = await puppeteer.launch({
     headless: "new",
@@ -27,29 +27,45 @@ async function scrape() {
     const page = await browser.newPage();
     await page.setViewport({ width: 1920, height: 1080 });
 
-    // 1. Direct Navigation (Bypasses Search Bar issues)
-    console.log(`Navigating to ${URL}...`);
-    // We allow 60s for the page to load initially
-    await page.goto(URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    // 1. INJECT THE COOKIE (The Key to Bypassing Cloudflare)
+    const cookieString = process.env.UNITE_COOKIE;
+    
+    if (cookieString) {
+        console.log("🍪 Injecting Auth Cookie...");
+        const cookies = cookieString.split(';').map(pair => {
+            const [name, ...value] = pair.trim().split('=');
+            return { 
+                name, 
+                value: value.join('='), 
+                domain: '.uniteapi.dev', 
+                path: '/' 
+            };
+        });
+        await page.setCookie(...cookies);
+    } else {
+        console.warn("⚠️ NO COOKIE FOUND! Did you add the secret to GitHub?");
+    }
 
-    // 2. THE SMART WAIT (The Fix for "N/A")
-    // The robot will wait up to 30 seconds specifically for the text "Win Rate" to appear.
-    // If Cloudflare blocks us, this will timeout and tell us.
-    console.log('Waiting for stats to appear on screen...');
+    // 2. Navigate
+    console.log(`Navigating to ${URL}...`);
+    // Increase timeout to 3 mins in case of slow server
+    await page.goto(URL, { waitUntil: 'domcontentloaded', timeout: 180000 });
+
+    // 3. Smart Wait (Wait for "Win Rate" to appear)
+    console.log('Waiting for stats...');
     try {
         await page.waitForFunction(
             () => document.body.innerText.includes('Win Rate') || document.body.innerText.includes('Battles'),
-            { timeout: 30000 }
+            { timeout: 60000 } // Wait 60s
         );
     } catch (e) {
-        // If this fails, we print what the page actually says so we can debug (e.g. "Just a moment...")
         const pageTitle = await page.title();
         const bodySnippet = await page.evaluate(() => document.body.innerText.substring(0, 100));
-        throw new Error(`Timeout waiting for stats. Page Title: "${pageTitle}". Page Text: "${bodySnippet}..."`);
+        throw new Error(`Still blocked or timed out. Title: "${pageTitle}". Text: "${bodySnippet}..."`);
     }
 
-    // 3. Extract Data
-    console.log('Stats found! Extracting numbers...');
+    // 4. Extract Data
+    console.log('Stats found! Extracting...');
     const stats = await page.evaluate(() => {
         const findStat = (keywords) => {
             const allElements = Array.from(document.querySelectorAll('div, span, p, h3, h4'));
@@ -59,11 +75,9 @@ async function scrape() {
             });
             if (!label) return null;
 
-            // Strategy 1: Next Sibling
             if (label.nextElementSibling && /\d/.test(label.nextElementSibling.innerText)) {
                 return label.nextElementSibling.innerText.trim();
             }
-            // Strategy 2: Parent Container
             if (label.parentElement) {
                 const val = label.parentElement.innerText.replace(label.innerText, '').trim();
                 if (/\d/.test(val)) return val;
@@ -118,9 +132,8 @@ async function scrape() {
         };
     });
 
-    // --- SAFETY CHECK ---
-    if (!stats.profile.winRate || stats.profile.winRate === "N/A" || stats.profile.winRate === "null") {
-        throw new Error("⚠️ SAFETY ABORT: Stats missing even after wait. Keeping old data.");
+    if (!stats.profile.winRate || stats.profile.winRate === "N/A") {
+        throw new Error("⚠️ SAFETY ABORT: Data missing.");
     }
 
     console.log('✅ Success! Found Win Rate:', stats.profile.winRate);
