@@ -8,8 +8,12 @@ puppeteer.use(StealthPlugin());
 const PLAYER_TAG = 'LXLC5ET';
 const URL = `https://uniteapi.dev/p/${PLAYER_TAG}`;
 
+// 🎭 THE MASK: This makes the robot claim it is a standard Windows Chrome Browser.
+// If this fails, copy your specific User-Agent from the Network Tab and paste it here.
+const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+
 async function scrape() {
-  console.log(`🚀 Launching Bot with Secret Cookie...`);
+  console.log(`🚀 Launching Impersonator Bot...`);
   
   const browser = await puppeteer.launch({
     headless: "new",
@@ -19,15 +23,19 @@ async function scrape() {
       '--disable-dev-shm-usage', 
       '--single-process', 
       '--disable-gpu',
-      '--window-size=1920,1080'
+      '--window-size=1920,1080',
+      '--disable-blink-features=AutomationControlled' // Hides "Chrome is being controlled by automated software"
     ]
   });
 
   try {
     const page = await browser.newPage();
+    
+    // 1. WEAR THE MASK (Set User-Agent)
+    await page.setUserAgent(USER_AGENT);
     await page.setViewport({ width: 1920, height: 1080 });
 
-    // 1. INJECT THE COOKIE (The Key to Bypassing Cloudflare)
+    // 2. INJECT THE COOKIE
     const cookieString = process.env.UNITE_COOKIE;
     
     if (cookieString) {
@@ -43,28 +51,27 @@ async function scrape() {
         });
         await page.setCookie(...cookies);
     } else {
-        console.warn("⚠️ NO COOKIE FOUND! Did you add the secret to GitHub?");
+        throw new Error("⚠️ SECRET MISSING: You must add UNITE_COOKIE to GitHub Secrets.");
     }
 
-    // 2. Navigate
+    // 3. Navigate
     console.log(`Navigating to ${URL}...`);
-    // Increase timeout to 3 mins in case of slow server
-    await page.goto(URL, { waitUntil: 'domcontentloaded', timeout: 180000 });
+    await page.goto(URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
 
-    // 3. Smart Wait (Wait for "Win Rate" to appear)
+    // 4. Smart Wait
     console.log('Waiting for stats...');
     try {
         await page.waitForFunction(
             () => document.body.innerText.includes('Win Rate') || document.body.innerText.includes('Battles'),
-            { timeout: 60000 } // Wait 60s
+            { timeout: 30000 }
         );
     } catch (e) {
+        // Debugging Info
         const pageTitle = await page.title();
-        const bodySnippet = await page.evaluate(() => document.body.innerText.substring(0, 100));
-        throw new Error(`Still blocked or timed out. Title: "${pageTitle}". Text: "${bodySnippet}..."`);
+        throw new Error(`Cloudflare blocked us again. Title: "${pageTitle}". (Try copying your specific User-Agent string into the script)`);
     }
 
-    // 4. Extract Data
+    // 5. Extract Data
     console.log('Stats found! Extracting...');
     const stats = await page.evaluate(() => {
         const findStat = (keywords) => {
