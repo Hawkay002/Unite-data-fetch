@@ -2,8 +2,7 @@ name: Update Unite Stats
 
 on:
   schedule:
-    # Runs at minute 0 of every hour (1:00, 2:00, 3:00...)
-    - cron: '0 * * * *'
+    - cron: '0 * * * *' # Every hour
   workflow_dispatch:
 
 permissions:
@@ -26,6 +25,8 @@ jobs:
         run: npm install
 
       - name: Run Scraper
+        env: 
+          UNITE_COOKIE: ${{ secrets.UNITE_COOKIE }}
         run: node scripts/scrape-stats.js
 
       - name: Commit and Push
